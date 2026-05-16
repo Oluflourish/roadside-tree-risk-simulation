@@ -1,5 +1,7 @@
 # Roadside Tree Risk Simulation
 
+**[Live demo →](https://oluflourish.github.io/roadside-tree-risk-simulation/tree_risk_explorer.html)**
+
 ![Tree Risk Explorer demo](demo/tree_risk_explorer.gif)
 
 An interactive, single-file browser tool for exploring how tree morphology and environmental parameters combine into a composite roadside fall-risk score. Built on the ISA TRAQ / QTRA framework with physics-based wind loading and gravity mechanics.
