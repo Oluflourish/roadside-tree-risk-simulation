@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tree Risk Parameter Explorer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff; --bg2: #f5f5f5; --bg3: #eeeeee;
+      --text: #111111; --text2: #555555; --text3: #888888;
+      --border: #dddddd; --border2: #cccccc;
+      --success: #1B5E20; --danger: #B71C1C;
+      --warning: #E65100; --info: #0D47A1;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a1a; --bg2: #242424; --bg3: #2e2e2e;
+        --text: #f0f0f0; --text2: #aaaaaa; --text3: #666666;
+        --border: #333333; --border2: #444444;
+        --success: #81C784; --danger: #EF9A9A;
+        --warning: #FFB74D; --info: #90CAF9;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg); color: var(--text);
+      padding: 24px; font-size: 14px; line-height: 1.5;
+    }
+
+    h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+
+    .section-title {
+      font-size: 12px; font-weight: 500; color: var(--text3);
+      letter-spacing: .04em; text-transform: uppercase;
+      margin: 20px 0 10px;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    .param-row {
+      display: grid; grid-template-columns: 130px 1fr 52px;
+      align-items: center; gap: 8px; margin-bottom: 10px;
+    }
+    .param-label { font-size: 13px; color: var(--text2); }
+    .param-val { font-size: 13px; font-weight: 500; text-align: right; }
+    input[type="range"] { width: 100%; accent-color: var(--info); }
+
+    .formula-box {
+      background: var(--bg2); border: 0.5px solid var(--border);
+      border-radius: var(--radius); padding: 10px 14px;
+      font-size: 12px; color: var(--text2); margin-bottom: 8px; line-height: 1.8;
+    }
+    .formula-box b { color: var(--text); font-weight: 500; }
+
+    .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .metric-card { background: var(--bg2); border-radius: var(--radius); padding: 10px 12px; }
+    .metric-card .mlabel { font-size: 11px; color: var(--text3); margin-bottom: 2px; }
+    .metric-card .mval { font-size: 20px; font-weight: 500; }
+    .metric-card .munit { font-size: 11px; color: var(--text2); margin-left: 2px; }
+
+    .risk-bar-wrap { background: var(--bg2); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 16px; }
+    .risk-bar-track { height: 10px; border-radius: 5px; background: var(--border); overflow: hidden; margin: 6px 0 4px; }
+    .risk-bar-fill { height: 100%; border-radius: 5px; transition: width .3s, background .3s; }
+    .risk-label { font-size: 15px; font-weight: 500; }
+    .risk-cat { font-size: 12px; color: var(--text2); }
+    .bar-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); }
+
+    hr { border: none; border-top: 0.5px solid var(--border); margin: 16px 0; }
+
+    .assess-row {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 7px 10px; border-radius: var(--radius);
+      background: var(--bg2); gap: 8px; margin-bottom: 5px;
+    }
+    .assess-key { font-size: 11px; color: var(--text3); min-width: 110px; }
+    .assess-val { font-size: 12px; font-weight: 500; text-align: right; }
+
+    .sens-row { display: grid; grid-template-columns: 110px 1fr 90px; align-items: center; gap: 6px; margin-bottom: 5px; }
+    .sens-label { font-size: 11px; color: var(--text2); }
+    .sens-track { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+    .sens-fill { height: 100%; border-radius: 3px; background: var(--info); }
+    .sens-note { font-size: 10px; color: var(--text3); }
+
+    .note { font-size: 11px; color: var(--text3); margin-top: 8px; line-height: 1.6; }
+
+    .explainer {
+      background: var(--bg2); border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg); padding: 20px 24px;
+      margin-top: 32px;
+    }
+    .explainer h2 { font-size: 15px; font-weight: 500; margin-bottom: 16px; }
+    .chain-block { margin-bottom: 18px; }
+    .chain-title {
+      font-size: 12px; font-weight: 500; color: var(--text3);
+      letter-spacing: .04em; text-transform: uppercase; margin-bottom: 6px;
+    }
+    .chain-body { font-size: 13px; color: var(--text2); line-height: 1.75; }
+    .chain-body b { color: var(--text); font-weight: 500; }
+    .chain-body code {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 12px; background: var(--bg3);
+      padding: 1px 5px; border-radius: 4px; color: var(--text);
+    }
+    .chain-divider { border: none; border-top: 0.5px solid var(--border); margin: 14px 0; }
+  </style>
+</head>
+<body>
+
+<h1>Tree Risk Parameter Explorer</h1>
+<p class="subtitle">Adjust sliders to see how each parameter feeds into the composite risk score (ISA TRAQ / QTRA framework)</p>
+
+<div class="grid">
+
+  <!-- LEFT COLUMN -->
+  <div>
+    <div class="section-title">Input parameters</div>
+    <div class="param-row">
+      <span class="param-label">Height H (m)</span>
+      <input type="range" min="5" max="40" value="18" step="1" id="sH" oninput="update()">
+      <span class="param-val" id="vH">18</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">DBH D (cm)</span>
+      <input type="range" min="10" max="80" value="30" step="1" id="sD" oninput="update()">
+      <span class="param-val" id="vD">30</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Lean angle θ (°)</span>
+      <input type="range" min="0" max="30" value="8" step="1" id="sTheta" oninput="update()">
+      <span class="param-val" id="vTheta">8°</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Canopy radius (m)</span>
+      <input type="range" min="1" max="10" value="4" step="0.5" id="sCR" oninput="update()">
+      <span class="param-val" id="vCR">4</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Crown density Cd</span>
+      <input type="range" min="0.3" max="1.0" value="0.6" step="0.05" id="sCd" oninput="update()">
+      <span class="param-val" id="vCd">0.60</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Wind speed (m/s)</span>
+      <input type="range" min="5" max="50" value="20" step="1" id="sU" oninput="update()">
+      <span class="param-val" id="vU">20</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Distance d (m)</span>
+      <input type="range" min="1" max="30" value="8" step="1" id="sD2" oninput="update()">
+      <span class="param-val" id="vD2">8</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">NDVI health</span>
+      <input type="range" min="0.1" max="0.9" value="0.7" step="0.05" id="sNDVI" oninput="update()">
+      <span class="param-val" id="vNDVI">0.70</span>
+    </div>
+
+    <hr>
+    <div class="section-title">Derived geometry</div>
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="mlabel">Slenderness H/D</div>
+        <div class="mval" id="mSlender">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="mlabel">Fall radius</div>
+        <div class="mval" id="mFall">—<span class="munit">m</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="mlabel">Frontal area A</div>
+        <div class="mval" id="mArea">—<span class="munit">m²</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="mlabel">COG height</div>
+        <div class="mval" id="mCOG">—<span class="munit">m</span></div>
+      </div>
+    </div>
+
+    <hr>
+    <div class="section-title">Live formula outputs</div>
+    <div class="formula-box">
+      <b>Wind drag:</b> F = ½ · ρ · Cd · A · U²<br>
+      F = 0.5 × 1.15 × <span id="fCd">—</span> × <span id="fA">—</span> × <span id="fU2">—</span> = <b id="fF">—</b> kN
+    </div>
+    <div class="formula-box">
+      <b>Wind moment:</b> M<sub>wind</sub> = F · h<sub>eff</sub> &nbsp;(h<sub>eff</sub> = 0.6H)<br>
+      M<sub>w</sub> = <span id="fF2">—</span> × <span id="fHeff">—</span> = <b id="fMw">—</b> kN·m
+    </div>
+    <div class="formula-box">
+      <b>Gravity moment:</b> M<sub>g</sub> = m · g · sin(θ) · h<sub>COG</sub><br>
+      M<sub>g</sub> ≈ <b id="fMg">—</b> kN·m &nbsp;(lean toward road)
+    </div>
+    <div class="formula-box">
+      <b>Stem resistance:</b> M<sub>break</sub> = (π/32) · σ · D³<br>
+      M<sub>break</sub> = <b id="fMbreak">—</b> kN·m &nbsp;(σ = 40 MPa)
+    </div>
+    <div class="formula-box">
+      <b>Safety margin:</b> M<sub>break</sub> − (M<sub>w</sub> + M<sub>g</sub>) = <b id="fSafety">—</b> kN·m
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div>
+    <div class="section-title">Tree geometry (live)</div>
+    <svg width="100%" viewBox="0 0 280 265" id="treeSVG"
+         role="img" aria-label="Live schematic tree updating with slider inputs">
+      <defs>
+        <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5"
+                markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke"
+                stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <line x1="20" y1="230" x2="260" y2="230" stroke="#cccccc" stroke-width="1"/>
+      <line x1="100" y1="228" x2="180" y2="228" stroke="#888888" stroke-width="3" stroke-linecap="round"/>
+      <text x="140" y="248" text-anchor="middle" font-size="10" fill="#888888">road edge ← d →</text>
+      <g id="treeG"></g>
+    </svg>
+    <p class="note">Canopy size, lean angle, and fall radius update live with the sliders.</p>
+
+    <hr>
+    <div class="section-title">Risk score &nbsp; R = P<sub>fail</sub> × P<sub>impact</sub> × C</div>
+    <div class="risk-bar-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <span class="risk-label" id="riskLabel">—</span>
+        <span class="risk-cat" id="riskCat">—</span>
+      </div>
+      <div class="risk-bar-track">
+        <div class="risk-bar-fill" id="riskBar" style="width:0%"></div>
+      </div>
+      <div class="bar-scale">
+        <span>Low</span><span>Moderate</span><span>High</span><span>Extreme</span>
+      </div>
+    </div>
+
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="mlabel">P(failure)</div>
+        <div class="mval" id="mPfail">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="mlabel">P(impact)</div>
+        <div class="mval" id="mPimpact">—</div>
+      </div>
+    </div>
+
+    <hr>
+    <div class="section-title">Sensitivity — what moves the score most</div>
+    <div id="sensitivity"></div>
+
+    <hr>
+    <div class="section-title">Extracted assessments</div>
+    <div id="assessments"></div>
+
+    <p class="note" style="margin-top:16px;">
+      Composite risk R = P_fail × P_impact × C_road (C=1 assumed).<br>
+      ISA TRAQ bins: Low &lt;5 · Moderate 5–25 · High 25–60 · Extreme &gt;60.<br>
+      ρ = 1.15 kg/m³ · σ = 40 MPa · m ≈ 150·H·D² kg (allometric).<br>
+      References: GALES (Gardiner et al.), HWIND (Peltola et al.), ISA TRAQ (Dunster et al. 2017).
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- MATHEMATICAL EXPLANATION SECTION                           -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="explainer">
+  <h2>How the parameters connect — mathematical chains</h2>
+
+  <div class="chain-block">
+    <div class="chain-title">Geometry chain</div>
+    <div class="chain-body">
+      <b>Height H</b> and <b>DBH D</b> combine into the slenderness ratio <code>H/D</code>,
+      which is the single strongest structural predictor — trees above <code>H/D &gt; 80</code>
+      are broadly considered fragile. The <b>lean angle θ</b> and <b>canopy radius CR</b>
+      determine whether the fall radius <code>H · cos θ</code> actually reaches the road
+      distance <code>d</code> — this is the binary gateway to impact probability.
+    </div>
+  </div>
+
+  <hr class="chain-divider">
+
+  <div class="chain-block">
+    <div class="chain-title">Wind loading chain</div>
+    <div class="chain-body">
+      <b>Canopy radius CR</b> → projected frontal area <code>A = π · CR² / 2</code> →
+      drag force <code>F = ½ · ρ · Cd · A · U²</code> (F grows with U²).
+      That force multiplied by the effective lever arm <code>h<sub>eff</sub> = 0.6H</code>
+      gives the wind overturning moment M<sub>wind</sub>.
+      Note <code>F ∝ U²</code> means doubling wind speed <em>quadruples</em> the moment —
+      which is why wind speed dominates the sensitivity ranking.
+    </div>
+  </div>
+
+  <hr class="chain-divider">
+
+  <div class="chain-block">
+    <div class="chain-title">Gravity chain</div>
+    <div class="chain-body">
+      <b>Lean angle θ</b> adds a permanent gravitational overturning moment
+      <code>M<sub>g</sub> = m · g · sin(θ) · h<sub>COG</sub></code>, even at zero wind.
+      The mass <code>m</code> is estimated from H and D via a simple allometric relation.
+      This is why a leaning tree at moderate wind is far more dangerous than an upright
+      tree in a storm.
+    </div>
+  </div>
+
+  <hr class="chain-divider">
+
+  <div class="chain-block">
+    <div class="chain-title">Failure criterion</div>
+    <div class="chain-body">
+      The stem's resistive moment <code>M<sub>break</sub> = (π/32) · σ · D³</code> is what
+      the tree can withstand. When <code>M<sub>wind</sub> + M<sub>g</sub></code> exceeds
+      <code>M<sub>break</sub></code>, the safety margin turns negative — shown in red —
+      and failure probability shoots toward 1. <b>DBH has a cubic effect here</b>, which is
+      why a small increase in trunk diameter provides disproportionate structural strength.
+    </div>
+  </div>
+
+  <hr class="chain-divider">
+
+  <div class="chain-block">
+    <div class="chain-title">Risk score</div>
+    <div class="chain-body">
+      <code>R = P<sub>failure</sub> × P<sub>impact</sub> × C<sub>road</sub></code>.
+      The sensitivity bars above show which parameter is currently moving the score most
+      given your current inputs — useful for prioritising what to measure most precisely
+      in the field.
+    </div>
+  </div>
+</div>
+
+<script>
+function update() {
+  const H    = +document.getElementById('sH').value;
+  const Dcm  = +document.getElementById('sD').value;
+  const deg  = +document.getElementById('sTheta').value;
+  const CR   = +document.getElementById('sCR').value;
+  const Cd   = +document.getElementById('sCd').value;
+  const U    = +document.getElementById('sU').value;
+  const d    = +document.getElementById('sD2').value;
+  const NDVI = +document.getElementById('sNDVI').value;
+
+  document.getElementById('vH').textContent     = H;
+  document.getElementById('vD').textContent     = Dcm;
+  document.getElementById('vTheta').textContent = deg + '°';
+  document.getElementById('vCR').textContent    = CR;
+  document.getElementById('vCd').textContent    = Cd.toFixed(2);
+  document.getElementById('vU').textContent     = U;
+  document.getElementById('vD2').textContent    = d;
+  document.getElementById('vNDVI').textContent  = NDVI.toFixed(2);
+
+  const D     = Dcm / 100;
+  const theta = deg * Math.PI / 180;
+  const rho   = 1.15;
+  const A     = Math.PI * CR * CR * 0.5;
+  const heff  = 0.6 * H;
+  const hCOG  = 0.65 * H;
+  const mass  = 150 * H * D * D;
+  const slend = H / D;
+  const fallR = H * Math.cos(theta);
+
+  const F      = 0.5 * rho * Cd * A * U * U / 1000;
+  const Mw     = F * heff;
+  const sigma  = 40e6;
+  const Mbreak = (Math.PI / 32) * sigma * Math.pow(D, 3) / 1000;
+  const Mg     = mass * 9.81 * Math.sin(theta) * hCOG / 1000;
+  const Mtotal = Mw + Mg;
+  const safety = Mbreak - Mtotal;
+
+  document.getElementById('mSlender').textContent = slend.toFixed(1);
+  document.getElementById('mFall').textContent    = fallR.toFixed(1);
+  document.getElementById('mArea').textContent    = A.toFixed(1);
+  document.getElementById('mCOG').textContent     = hCOG.toFixed(1);
+
+  document.getElementById('fCd').textContent     = Cd.toFixed(2);
+  document.getElementById('fA').textContent      = A.toFixed(1);
+  document.getElementById('fU2').textContent     = (U * U).toFixed(0);
+  document.getElementById('fF').textContent      = F.toFixed(2);
+  document.getElementById('fF2').textContent     = F.toFixed(2);
+  document.getElementById('fHeff').textContent   = heff.toFixed(1);
+  document.getElementById('fMw').textContent     = Mw.toFixed(1);
+  document.getElementById('fMg').textContent     = Mg.toFixed(1);
+  document.getElementById('fMbreak').textContent = Mbreak.toFixed(1);
+
+  const safetyEl = document.getElementById('fSafety');
+  safetyEl.textContent = safety.toFixed(1);
+  safetyEl.style.color = safety < 0 ? 'var(--danger)' : 'var(--success)';
+
+  const pfail_mech   = Math.max(0, Math.min(1, Mtotal / Mbreak));
+  const pfail_slend  = slend > 80 ? 0.9 : slend > 50 ? 0.5 : slend > 30 ? 0.2 : 0.08;
+  const pfail_health = NDVI < 0.3 ? 0.8 : NDVI < 0.5 ? 0.5 : NDVI < 0.7 ? 0.2 : 0.05;
+  const Pfail = Math.min(1, pfail_mech * 0.6 + pfail_slend * 0.25 + pfail_health * 0.15);
+
+  const canReach = fallR > d;
+  const Pimpact  = canReach
+    ? Math.min(1, 0.4 + 0.4 * (deg / 30) + 0.2 * Math.min(1, CR / d))
+    : 0.05;
+
+  const R = Math.round(Pfail * Pimpact * 100);
+
+  document.getElementById('mPfail').textContent   = (Pfail * 100).toFixed(0) + '%';
+  document.getElementById('mPimpact').textContent = (Pimpact * 100).toFixed(0) + '%';
+
+  const riskBar   = document.getElementById('riskBar');
+  const riskLabel = document.getElementById('riskLabel');
+  const riskCat   = document.getElementById('riskCat');
+  riskBar.style.width = Math.min(100, R) + '%';
+  riskLabel.textContent = 'R = ' + R;
+
+  let cat, col;
+  if (R < 5)       { cat = 'Low';      col = 'var(--success)'; }
+  else if (R < 25) { cat = 'Moderate'; col = 'var(--warning)'; }
+  else if (R < 60) { cat = 'High';     col = '#D85A30'; }
+  else             { cat = 'Extreme';  col = 'var(--danger)'; }
+
+  riskCat.textContent      = cat;
+  riskBar.style.background = col;
+  riskLabel.style.color    = col;
+
+  const sens = [
+    { label: 'Wind speed U',     impact: (U / 50) * 35,                              note: 'F ∝ U²' },
+    { label: 'Height H',         impact: (H / 40) * 28,                              note: 'moment arm ∝ H' },
+    { label: 'Lean angle θ',     impact: (deg / 30) * 25,                            note: 'adds M_gravity' },
+    { label: 'Slenderness H/D',  impact: Math.min(100, (slend / 80) * 22),           note: 'structural fragility' },
+    { label: 'Canopy radius CR', impact: (CR / 10) * 18,                             note: 'A ∝ CR²' },
+    { label: 'NDVI health',      impact: ((1 - NDVI) / 0.9) * 15,                   note: 'low = compromised' },
+    { label: 'Distance d',       impact: canReach ? Math.max(0,(1-d/fallR)*12) : 2,  note: 'P(impact)' },
+  ].sort((a, b) => b.impact - a.impact);
+
+  document.getElementById('sensitivity').innerHTML = sens.slice(0, 5).map(s => `
+    <div class="sens-row">
+      <span class="sens-label">${s.label}</span>
+      <div class="sens-track">
+        <div class="sens-fill" style="width:${Math.min(100, s.impact).toFixed(0)}%"></div>
+      </div>
+      <span class="sens-note">${s.note}</span>
+    </div>`).join('');
+
+  const assessments = [
+    { label: 'Fall can reach road?', ok: !canReach,
+      val: canReach ? `Yes — ${fallR.toFixed(1)} m > d = ${d} m` : `No — ${fallR.toFixed(1)} m < ${d} m` },
+    { label: 'Slenderness check', ok: slend < 50,
+      val: slend > 80 ? `Hazardous (${slend.toFixed(1)})` : slend > 50 ? `Elevated (${slend.toFixed(1)})` : `Normal (${slend.toFixed(1)})` },
+    { label: 'Stem safety margin', ok: safety >= 0,
+      val: safety >= 0 ? `+${safety.toFixed(1)} kN·m — intact` : `${safety.toFixed(1)} kN·m — OVERLOADED` },
+    { label: 'Crown drag force', ok: F < 3,
+      val: `${(F * 1000).toFixed(0)} N at ${U} m/s` },
+    { label: 'NDVI health flag', ok: NDVI >= 0.65,
+      val: NDVI < 0.4 ? 'Stressed — elevated risk' : NDVI < 0.65 ? 'Moderate vigor' : 'Healthy canopy' },
+    { label: 'ISA TRAQ rating', ok: R < 25,
+      val: `${cat} (R = ${R})` },
+  ];
+
+  document.getElementById('assessments').innerHTML = assessments.map(a => `
+    <div class="assess-row">
+      <span class="assess-key">${a.label}</span>
+      <span class="assess-val" style="color:${a.ok ? 'var(--success)' : 'var(--danger)'}">${a.val}</span>
+    </div>`).join('');
+
+  drawTree(H, deg, CR, d, fallR, canReach, safety < 0);
+}
+
+function drawTree(H, deg, CR, d, fallR, canReach, overloaded) {
+  const scale   = 195 / Math.max(H, fallR + 5, d + 8);
+  const baseX   = 60, baseY = 225;
+  const leanRad = deg * Math.PI / 180;
+  const topX    = baseX + H * scale * Math.sin(leanRad);
+  const topY    = baseY - H * scale * Math.cos(leanRad);
+  const cr      = CR * scale;
+
+  const trunkCol  = overloaded ? '#E24B4A' : '#6D4C1F';
+  const canopyCol = overloaded ? '#E24B4A' : '#388E3C';
+  const canopyFill= overloaded ? '#FEE2E2' : '#DCFCE7';
+
+  let html = '';
+
+  if (canReach) {
+    const fx = Math.min(baseX + fallR * scale, 265);
+    html += `<line x1="${baseX}" y1="${baseY}" x2="${fx}" y2="${baseY}"
+              stroke="#E24B4A" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.65"/>`;
+    html += `<circle cx="${fx}" cy="${baseY}" r="3" fill="#E24B4A" opacity="0.7"/>`;
+    html += `<text x="${(baseX+fx)/2}" y="${baseY-6}" text-anchor="middle"
+              font-size="9" fill="#E24B4A">fall r=${fallR.toFixed(1)}m</text>`;
+  }
+
+  const re = baseX + d * scale;
+  if (re < 265) {
+    html += `<line x1="${re}" y1="195" x2="${re}" y2="${baseY+8}"
+              stroke="#888888" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.6"/>`;
+    html += `<text x="${re+3}" y="205" font-size="9" fill="#888888">d=${d}m</text>`;
+  }
+
+  html += `<ellipse cx="${topX}" cy="${topY}" rx="${cr}" ry="${cr * 0.68}"
+            fill="${canopyFill}" stroke="${canopyCol}" stroke-width="1.2"/>`;
+  html += `<line x1="${baseX}" y1="${baseY}" x2="${topX}" y2="${topY}"
+            stroke="${trunkCol}" stroke-width="5.5" stroke-linecap="round"/>`;
+
+  if (deg > 0) {
+    const hcog = 0.65 * H;
+    const cogX = baseX + hcog * scale * Math.sin(leanRad);
+    const cogY = baseY - hcog * scale * Math.cos(leanRad);
+    html += `<circle cx="${cogX}" cy="${cogY}" r="4.5" fill="none" stroke="#BA7517" stroke-width="1.5"/>`;
+    html += `<line x1="${cogX-4.5}" y1="${cogY}" x2="${cogX+4.5}" y2="${cogY}" stroke="#BA7517" stroke-width="1.5"/>`;
+    html += `<line x1="${cogX}" y1="${cogY-4.5}" x2="${cogX}" y2="${cogY+4.5}" stroke="#BA7517" stroke-width="1.5"/>`;
+    html += `<text x="${cogX+7}" y="${cogY+4}" font-size="9" fill="#BA7517">COG</text>`;
+  }
+
+  html += `<line x1="${baseX-16}" y1="${baseY}" x2="${baseX-16}" y2="${topY}"
+            stroke="#888888" stroke-width="0.8"
+            marker-start="url(#arr2)" marker-end="url(#arr2)"/>`;
+  html += `<text x="${baseX-22}" y="${(baseY+topY)/2+4}" text-anchor="middle"
+            font-size="9" fill="#888888" dominant-baseline="central">H=${H}m</text>`;
+
+  document.getElementById('treeG').innerHTML = html;
+}
+
+update();
+</script>
+</body>
+</html>
